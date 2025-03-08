@@ -56,7 +56,7 @@
 #define CLAY__MAX(x, y) (((x) > (y)) ? (x) : (y))
 #define CLAY__MIN(x, y) (((x) < (y)) ? (x) : (y))
 
-#define CLAY_TEXT_CONFIG(...) Clay__StoreTextElementConfig(CLAY__CONFIG_WRAPPER(Clay_TextElementConfig, __VA_ARGS__))
+#define CLAY_TEXT_CONFIG(...) Clay__StoreTextElementConfig_ctx(Clay_GetCurrentContext(), CLAY__CONFIG_WRAPPER(Clay_TextElementConfig, __VA_ARGS__))
 
 #define CLAY_BORDER_OUTSIDE(widthValue) {widthValue, widthValue, widthValue, widthValue, 0}
 
@@ -92,7 +92,7 @@
 // Note: If a compile error led you here, you might be trying to use CLAY_IDI_LOCAL with something other than a string literal. To construct an ID with a dynamic string, use CLAY_SIDI_LOCAL instead.
 #define CLAY_IDI_LOCAL(label, index) CLAY_SIDI_LOCAL(CLAY_STRING(label), index)
 
-#define CLAY_SIDI_LOCAL(label, index) Clay__HashString(label, index, Clay__GetParentElementId())
+#define CLAY_SIDI_LOCAL(label, index) Clay__HashString(label, index, Clay__GetParentElementId_ctx(Clay_GetCurrentContext()))
 
 #define CLAY__STRING_LENGTH(s) ((sizeof(s) / sizeof((s)[0])) - sizeof((s)[0]))
 
@@ -888,13 +888,13 @@ CLAY_DLL_EXPORT void Clay_ResetMeasureTextCache(void);
 
 // Internal API functions required by macros ----------------------
 
-CLAY_DLL_EXPORT void Clay__OpenElement(void);
-CLAY_DLL_EXPORT void Clay__ConfigureOpenElement(const Clay_ElementDeclaration config);
-CLAY_DLL_EXPORT void Clay__CloseElement(void);
+CLAY_DLL_EXPORT void Clay__OpenElement_ctx(Clay_Context* context);
+CLAY_DLL_EXPORT void Clay__ConfigureOpenElement_ctx(Clay_Context* context, const Clay_ElementDeclaration config);
+CLAY_DLL_EXPORT void Clay__CloseElement_ctx(Clay_Context* context);
 CLAY_DLL_EXPORT Clay_ElementId Clay__HashString(Clay_String key, uint32_t offset, uint32_t seed);
-CLAY_DLL_EXPORT void Clay__OpenTextElement(Clay_String text, Clay_TextElementConfig *textConfig);
-CLAY_DLL_EXPORT Clay_TextElementConfig *Clay__StoreTextElementConfig(Clay_TextElementConfig config);
-CLAY_DLL_EXPORT uint32_t Clay__GetParentElementId(void);
+CLAY_DLL_EXPORT void Clay__OpenTextElement_ctx(Clay_Context* context, Clay_String text, Clay_TextElementConfig *textConfig);
+CLAY_DLL_EXPORT Clay_TextElementConfig *Clay__StoreTextElementConfig_ctx(Clay_Context* context, Clay_TextElementConfig config);
+CLAY_DLL_EXPORT uint32_t Clay__GetParentElementId_ctx(Clay_Context* context);
 
 extern Clay_Color Clay__debugViewHighlightColor;
 extern uint32_t Clay__debugViewWidth;
@@ -2981,9 +2981,9 @@ Clay__RenderDebugLayoutData Clay__RenderDebugLayoutElementsList_ctx(Clay_Context
             Clay_LayoutElement *currentElement = Clay_LayoutElementArray_Get_ctx(context, &context->layoutElements, (int)currentElementIndex);
             if (context->treeNodeVisited.internalArray[dfsBuffer.length - 1]) {
                 if (!Clay__ElementHasConfig_ctx(context, currentElement, CLAY__ELEMENT_CONFIG_TYPE_TEXT) && currentElement->childrenOrTextContent.children.length > 0) {
-                    Clay__CloseElement();
-                    Clay__CloseElement();
-                    Clay__CloseElement();
+                    Clay__CloseElement_ctx(context);
+                    Clay__CloseElement_ctx(context);
+                    Clay__CloseElement_ctx(context);
                 }
                 dfsBuffer.length--;
                 continue;
@@ -3078,12 +3078,12 @@ Clay__RenderDebugLayoutData Clay__RenderDebugLayoutElementsList_ctx(Clay_Context
                     CLAY_TEXT(CLAY_STRING("\""), rawTextConfig);
                 }
             } else if (currentElement->childrenOrTextContent.children.length > 0) {
-                Clay__OpenElement();
-                Clay__ConfigureOpenElement(CLAY__INIT(Clay_ElementDeclaration) { .layout = { .padding = { .left = 8 } } });
-                Clay__OpenElement();
-                Clay__ConfigureOpenElement(CLAY__INIT(Clay_ElementDeclaration) { .layout = { .padding = { .left = CLAY__DEBUGVIEW_INDENT_WIDTH }}, .border = { .color = CLAY__DEBUGVIEW_COLOR_3, .width = { .left = 1 } }});
-                Clay__OpenElement();
-                Clay__ConfigureOpenElement(CLAY__INIT(Clay_ElementDeclaration) { .layout = { .layoutDirection = CLAY_TOP_TO_BOTTOM } });
+                Clay__OpenElement_ctx(context);
+                Clay__ConfigureOpenElement_ctx(context, CLAY__INIT(Clay_ElementDeclaration) { .layout = { .padding = { .left = 8 } } });
+                Clay__OpenElement_ctx(context);
+                Clay__ConfigureOpenElement_ctx(context, CLAY__INIT(Clay_ElementDeclaration) { .layout = { .padding = { .left = CLAY__DEBUGVIEW_INDENT_WIDTH }}, .border = { .color = CLAY__DEBUGVIEW_COLOR_3, .width = { .left = 1 } }});
+                Clay__OpenElement_ctx(context);
+                Clay__ConfigureOpenElement_ctx(context, CLAY__INIT(Clay_ElementDeclaration) { .layout = { .layoutDirection = CLAY_TOP_TO_BOTTOM } });
             }
 
             layoutData.rowCount++;
@@ -3902,8 +3902,8 @@ void Clay_BeginLayout_ctx(Clay_Context* context) {
         rootDimensions.width -= (float)Clay__debugViewWidth;
     }
     context->booleanWarnings = CLAY__INIT(Clay_BooleanWarnings) CLAY__DEFAULT_STRUCT;
-    Clay__OpenElement();
-    Clay__ConfigureOpenElement(CLAY__INIT(Clay_ElementDeclaration) {
+    Clay__OpenElement_ctx(context);
+    Clay__ConfigureOpenElement_ctx(context, CLAY__INIT(Clay_ElementDeclaration) {
             .id = CLAY_ID("Clay__RootContainer"),
             .layout = { .sizing = {CLAY_SIZING_FIXED((rootDimensions.width)), CLAY_SIZING_FIXED(rootDimensions.height)} }
     });
@@ -3916,7 +3916,7 @@ void Clay_BeginLayout(void) {
 }
 
 Clay_RenderCommandArray Clay_EndLayout_ctx(Clay_Context* context) {
-    Clay__CloseElement();
+    Clay__CloseElement_ctx(context);
     bool elementsExceededBeforeDebugView = context->booleanWarnings.maxElementsExceeded;
     if (context->debugModeEnabled && !elementsExceededBeforeDebugView) {
         context->warningsEnabled = false;
