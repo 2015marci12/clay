@@ -3979,7 +3979,7 @@ bool Clay_Hovered_ctx(Clay_Context* context) {
     }
     return false;
 }
-bool Clay_HoveredClay(void) { return Clay_Hovered_ctx(Clay_GetCurrentContext()); }
+bool Clay_Hovered(void) { return Clay_Hovered_ctx(Clay_GetCurrentContext()); }
 
 void Clay_OnHover_ctx(Clay_Context* context, void (*onHoverFunction)(Clay_ElementId elementId, Clay_PointerData pointerInfo, intptr_t userData), intptr_t userData) {
     if (context->booleanWarnings.maxElementsExceeded) {
