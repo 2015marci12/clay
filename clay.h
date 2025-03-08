@@ -3942,7 +3942,7 @@ Clay_RenderCommandArray Clay_EndLayout_ctx(Clay_Context* context) {
 }
 CLAY_WASM_EXPORT("Clay_EndLayout")
 Clay_RenderCommandArray Clay_EndLayout(void) {
-    Clay_EndLayout_ctx(Clay_GetCurrentContext());
+    return Clay_EndLayout_ctx(Clay_GetCurrentContext());
 }
 
 CLAY_WASM_EXPORT("Clay_GetElementId")
