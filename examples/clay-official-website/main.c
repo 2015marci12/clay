@@ -432,7 +432,7 @@ CLAY_WASM_EXPORT("UpdateDrawFrame") Clay_RenderCommandArray UpdateDrawFrame(floa
     Clay_SetLayoutDimensions((Clay_Dimensions) { width, height });
     Clay_ScrollContainerData scrollContainerData = Clay_GetScrollContainerData(Clay_GetElementId(CLAY_STRING("OuterScrollContainer")));
     // TODO: Should this use an internal function? could this functionality be recreated in a public API? 
-    Clay_LayoutElementHashMapItem *perfPage = Clay__GetHashMapItem_ctx(Clay_GetCurrentContext(), Clay_GetElementId(CLAY_STRING("PerformanceOuter")).id);
+    Clay_LayoutElementHashMapItem *perfPage = Clay__GetHashMapItem(Clay_GetCurrentContext(), Clay_GetElementId(CLAY_STRING("PerformanceOuter")).id);
     // NaN propagation can cause pain here
     float perfPageYOffset = perfPage->boundingBox.y + scrollContainerData.scrollPosition->y;
     if (deltaTime == deltaTime && (ACTIVE_RENDERER_INDEX == 1 || (perfPageYOffset < height && perfPageYOffset + perfPage->boundingBox.height > 0))) {
