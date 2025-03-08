@@ -131,15 +131,15 @@
 */
 #define CLAY(...)                                                                                                                                           \
     for (                                                                                                                                                   \
-        Clay_GetCurrentContext()->CLAY__ELEMENT_DEFINITION_LATCH = (Clay__OpenElement_ctx(Clay_GetCurrentContext()), Clay__ConfigureOpenElement_ctx(Clay_GetCurrentContext(), CLAY__CONFIG_WRAPPER(Clay_ElementDeclaration, __VA_ARGS__)), 0);  \
-        Clay_GetCurrentContext()->CLAY__ELEMENT_DEFINITION_LATCH < 1;                                                                                                                 \
-        ++(Clay_GetCurrentContext()->CLAY__ELEMENT_DEFINITION_LATCH), Clay__CloseElement_ctx(Clay_GetCurrentContext())                                                                                              \
+        *Clay__GetElementDefinitionLatch_ctx(Clay_GetCurrentContext()) = (Clay__OpenElement_ctx(Clay_GetCurrentContext()), Clay__ConfigureOpenElement_ctx(Clay_GetCurrentContext(), CLAY__CONFIG_WRAPPER(Clay_ElementDeclaration, __VA_ARGS__)), 0);  \
+        *Clay__GetElementDefinitionLatch_ctx(Clay_GetCurrentContext()) < 1;                                                                                                                 \
+        ++(*Clay__GetElementDefinitionLatch_ctx(Clay_GetCurrentContext())), Clay__CloseElement_ctx(Clay_GetCurrentContext())                                                                                              \
     )
 #define CLAY_CTX(context, ...)                                                                                                                                           \
     for (                                                                                                                                                   \
-        context->CLAY__ELEMENT_DEFINITION_LATCH = (Clay__OpenElement_ctx(context), Clay__ConfigureOpenElement_ctx(context, CLAY__CONFIG_WRAPPER(Clay_ElementDeclaration, __VA_ARGS__)), 0);  \
-        context->CLAY__ELEMENT_DEFINITION_LATCH < 1;                                                                                                                 \
-        ++(context->CLAY__ELEMENT_DEFINITION_LATCH), Clay__CloseElement_ctx(context)                                                                                              \
+        *Clay__GetElementDefinitionLatch_ctx(context) = (Clay__OpenElement_ctx(context), Clay__ConfigureOpenElement_ctx(context, CLAY__CONFIG_WRAPPER(Clay_ElementDeclaration, __VA_ARGS__)), 0);  \
+        *Clay__GetElementDefinitionLatch_ctx(context) < 1;                                                                                                                 \
+        ++(*Clay__GetElementDefinitionLatch_ctx(context)), Clay__CloseElement_ctx(context)                                                                                              \
     )
 
 // These macros exist to allow the CLAY() macro to be called both with an inline struct definition, such as
@@ -888,6 +888,7 @@ CLAY_DLL_EXPORT void Clay_ResetMeasureTextCache(void);
 
 // Internal API functions required by macros ----------------------
 
+CLAY_DLL_EXPORT uint8_t* Clay__GetElementDefinitionLatch_ctx(Clay_Context* context);
 CLAY_DLL_EXPORT void Clay__OpenElement_ctx(Clay_Context* context);
 CLAY_DLL_EXPORT void Clay__ConfigureOpenElement_ctx(Clay_Context* context, const Clay_ElementDeclaration config);
 CLAY_DLL_EXPORT void Clay__CloseElement_ctx(Clay_Context* context);
@@ -1250,6 +1251,10 @@ struct Clay_Context {
     //Latch for the macro.
     uint8_t CLAY__ELEMENT_DEFINITION_LATCH;
 };
+
+uin8_t* Clay__GetElementDefinitionLatch_ctx(Clay_Context* context) {
+    return &(context->CLAY__ELEMENT_DEFINITION_LATCH);
+}
 
 Clay_Context* Clay__Context_Allocate_Arena(Clay_Arena *arena) {
     size_t totalSizeBytes = sizeof(Clay_Context);
@@ -3653,6 +3658,9 @@ void Clay_SetQueryScrollOffsetFunction(Clay_Vector2 (*queryScrollOffsetFunction)
 }
 #endif
 
+Clay_RenderCommand * Clay_RenderCommandArray_Get(Clay_RenderCommandArray* array, int32_t index) {
+    return Clay_RenderCommandArray_Get_ctx(Clay_GetCurrentContext(), array, index);
+}
 
 void Clay_SetLayoutDimensions_ctx(Clay_Context* context, Clay_Dimensions dimensions) {
     context->layoutDimensions = dimensions;
@@ -4064,7 +4072,7 @@ void Clay_SetCullingEnabled(bool enabled) {
 
 CLAY_WASM_EXPORT("Clay_SetExternalScrollHandlingEnabled")
 void Clay_SetExternalScrollHandlingEnabled(bool enabled) {
-    Clay_SetExternalScrollHandlingEnabled(Clay_GetCurrentContext());
+    Clay_SetExternalScrollHandlingEnabled_ctx(Clay_GetCurrentContext());
 }
 void Clay_SetExternalScrollHandlingEnabled_ctx(Clay_Context* context, bool enabled) {
     context->externalScrollHandlingEnabled = enabled;
