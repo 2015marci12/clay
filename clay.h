@@ -100,8 +100,6 @@
 
 #define CLAY_STRING_CONST(string) { .length = CLAY__STRING_LENGTH(CLAY__ENSURE_STRING_LITERAL(string)), .chars = (string) }
 
-static uint8_t CLAY__ELEMENT_DEFINITION_LATCH;
-
 // Publicly visible layout element macros -----------------------------------------------------
 
 /* This macro looks scary on the surface, but is actually quite simple.
@@ -130,9 +128,15 @@ static uint8_t CLAY__ELEMENT_DEFINITION_LATCH;
 */
 #define CLAY(...)                                                                                                                                           \
     for (                                                                                                                                                   \
-        CLAY__ELEMENT_DEFINITION_LATCH = (Clay__OpenElement(), Clay__ConfigureOpenElement(CLAY__CONFIG_WRAPPER(Clay_ElementDeclaration, __VA_ARGS__)), 0);  \
-        CLAY__ELEMENT_DEFINITION_LATCH < 1;                                                                                                                 \
-        ++CLAY__ELEMENT_DEFINITION_LATCH, Clay__CloseElement()                                                                                              \
+        Clay_GetCurrentContext()->CLAY__ELEMENT_DEFINITION_LATCH = (Clay__OpenElement_ctx(Clay_GetCurrentContext()), Clay__ConfigureOpenElement_ctx(Clay_GetCurrentContext(), CLAY__CONFIG_WRAPPER(Clay_ElementDeclaration, __VA_ARGS__)), 0);  \
+        Clay_GetCurrentContext()->CLAY__ELEMENT_DEFINITION_LATCH < 1;                                                                                                                 \
+        ++(Clay_GetCurrentContext()->CLAY__ELEMENT_DEFINITION_LATCH), Clay__CloseElement_ctx(Clay_GetCurrentContext())                                                                                              \
+    )
+#define CLAY_CTX(context, ...)                                                                                                                                           \
+    for (                                                                                                                                                   \
+        context->CLAY__ELEMENT_DEFINITION_LATCH = (Clay__OpenElement_ctx(context), Clay__ConfigureOpenElement_ctx(context, CLAY__CONFIG_WRAPPER(Clay_ElementDeclaration, __VA_ARGS__)), 0);  \
+        context->CLAY__ELEMENT_DEFINITION_LATCH < 1;                                                                                                                 \
+        ++(context->CLAY__ELEMENT_DEFINITION_LATCH), Clay__CloseElement_ctx(context)                                                                                              \
     )
 
 // These macros exist to allow the CLAY() macro to be called both with an inline struct definition, such as
@@ -144,7 +148,8 @@ static uint8_t CLAY__ELEMENT_DEFINITION_LATCH;
 #define CLAY__WRAPPER_STRUCT(type) typedef struct { type wrapped; } CLAY__WRAPPER_TYPE(type)
 #define CLAY__CONFIG_WRAPPER(type, ...) (CLAY__INIT(CLAY__WRAPPER_TYPE(type)) { __VA_ARGS__ }).wrapped
 
-#define CLAY_TEXT(text, textConfig) Clay__OpenTextElement(text, textConfig)
+#define CLAY_TEXT(text, textConfig) Clay__OpenTextElement_ctx(Clay_GetCurrentContext(), text, textConfig)
+#define CLAY_TEXT_CTX(ctx, text, textConfig) Clay__OpenTextElement_ctx(ctx, text, textConfig)
 
 #ifdef __cplusplus
 
@@ -1237,6 +1242,8 @@ struct Clay_Context {
     Clay__boolArray treeNodeVisited;
     Clay__charArray dynamicStringData;
     Clay__DebugElementDataArray debugElementData;
+    //Latch for the macro.
+    uint8_t CLAY__ELEMENT_DEFINITION_LATCH;
 };
 
 Clay_Context* Clay__Context_Allocate_Arena(Clay_Arena *arena) {
@@ -1268,27 +1275,24 @@ Clay_String Clay__WriteStringToCharBuffer(Clay__charArray *buffer, Clay_String s
     Clay_Vector2 (*Clay__QueryScrollOffset)(uint32_t elementId, void *userData);
 #endif
 
-Clay_LayoutElement* Clay__GetOpenLayoutElement(void) {
-    Clay_Context* context = Clay_GetCurrentContext();
+Clay_LayoutElement* Clay__GetOpenLayoutElement_ctx(Clay_Context* context) {
     return Clay_LayoutElementArray_Get(&context->layoutElements, Clay__int32_tArray_GetValue(&context->openLayoutElementStack, context->openLayoutElementStack.length - 1));
 }
 
-uint32_t Clay__GetParentElementId(void) {
-    Clay_Context* context = Clay_GetCurrentContext();
+uint32_t Clay__GetParentElementId_ctx(Clay_Context* context) {
     return Clay_LayoutElementArray_Get(&context->layoutElements, Clay__int32_tArray_GetValue(&context->openLayoutElementStack, context->openLayoutElementStack.length - 2))->id;
 }
 
-Clay_LayoutConfig * Clay__StoreLayoutConfig(Clay_LayoutConfig config) {  return Clay_GetCurrentContext()->booleanWarnings.maxElementsExceeded ? &CLAY_LAYOUT_DEFAULT : Clay__LayoutConfigArray_Add(&Clay_GetCurrentContext()->layoutConfigs, config); }
-Clay_TextElementConfig * Clay__StoreTextElementConfig(Clay_TextElementConfig config) {  return Clay_GetCurrentContext()->booleanWarnings.maxElementsExceeded ? &Clay_TextElementConfig_DEFAULT : Clay__TextElementConfigArray_Add(&Clay_GetCurrentContext()->textElementConfigs, config); }
-Clay_ImageElementConfig * Clay__StoreImageElementConfig(Clay_ImageElementConfig config) {  return Clay_GetCurrentContext()->booleanWarnings.maxElementsExceeded ? &Clay_ImageElementConfig_DEFAULT : Clay__ImageElementConfigArray_Add(&Clay_GetCurrentContext()->imageElementConfigs, config); }
-Clay_FloatingElementConfig * Clay__StoreFloatingElementConfig(Clay_FloatingElementConfig config) {  return Clay_GetCurrentContext()->booleanWarnings.maxElementsExceeded ? &Clay_FloatingElementConfig_DEFAULT : Clay__FloatingElementConfigArray_Add(&Clay_GetCurrentContext()->floatingElementConfigs, config); }
-Clay_CustomElementConfig * Clay__StoreCustomElementConfig(Clay_CustomElementConfig config) {  return Clay_GetCurrentContext()->booleanWarnings.maxElementsExceeded ? &Clay_CustomElementConfig_DEFAULT : Clay__CustomElementConfigArray_Add(&Clay_GetCurrentContext()->customElementConfigs, config); }
-Clay_ScrollElementConfig * Clay__StoreScrollElementConfig(Clay_ScrollElementConfig config) {  return Clay_GetCurrentContext()->booleanWarnings.maxElementsExceeded ? &Clay_ScrollElementConfig_DEFAULT : Clay__ScrollElementConfigArray_Add(&Clay_GetCurrentContext()->scrollElementConfigs, config); }
-Clay_BorderElementConfig * Clay__StoreBorderElementConfig(Clay_BorderElementConfig config) {  return Clay_GetCurrentContext()->booleanWarnings.maxElementsExceeded ? &Clay_BorderElementConfig_DEFAULT : Clay__BorderElementConfigArray_Add(&Clay_GetCurrentContext()->borderElementConfigs, config); }
-Clay_SharedElementConfig * Clay__StoreSharedElementConfig(Clay_SharedElementConfig config) {  return Clay_GetCurrentContext()->booleanWarnings.maxElementsExceeded ? &Clay_SharedElementConfig_DEFAULT : Clay__SharedElementConfigArray_Add(&Clay_GetCurrentContext()->sharedElementConfigs, config); }
+Clay_LayoutConfig * Clay__StoreLayoutConfig_ctx(Clay_Context* context, Clay_LayoutConfig config) {  return context->booleanWarnings.maxElementsExceeded ? &CLAY_LAYOUT_DEFAULT : Clay__LayoutConfigArray_Add(&context->layoutConfigs, config); }
+Clay_TextElementConfig * Clay__StoreTextElementConfig_ctx(Clay_Context* context, Clay_TextElementConfig config) {  return context->booleanWarnings.maxElementsExceeded ? &Clay_TextElementConfig_DEFAULT : Clay__TextElementConfigArray_Add(&context->textElementConfigs, config); }
+Clay_ImageElementConfig * Clay__StoreImageElementConfig_ctx(Clay_Context* context, Clay_ImageElementConfig config) {  return context->booleanWarnings.maxElementsExceeded ? &Clay_ImageElementConfig_DEFAULT : Clay__ImageElementConfigArray_Add(&context->imageElementConfigs, config); }
+Clay_FloatingElementConfig * Clay__StoreFloatingElementConfig_ctx(Clay_Context* context, Clay_FloatingElementConfig config) {  return context->booleanWarnings.maxElementsExceeded ? &Clay_FloatingElementConfig_DEFAULT : Clay__FloatingElementConfigArray_Add(&context->floatingElementConfigs, config); }
+Clay_CustomElementConfig * Clay__StoreCustomElementConfig_ctx(Clay_Context* context, Clay_CustomElementConfig config) {  return context->booleanWarnings.maxElementsExceeded ? &Clay_CustomElementConfig_DEFAULT : Clay__CustomElementConfigArray_Add(&context->customElementConfigs, config); }
+Clay_ScrollElementConfig * Clay__StoreScrollElementConfig_ctx(Clay_Context* context, Clay_ScrollElementConfig config) {  return context->booleanWarnings.maxElementsExceeded ? &Clay_ScrollElementConfig_DEFAULT : Clay__ScrollElementConfigArray_Add(&context->scrollElementConfigs, config); }
+Clay_BorderElementConfig * Clay__StoreBorderElementConfig_ctx(Clay_Context* context, Clay_BorderElementConfig config) {  return context->booleanWarnings.maxElementsExceeded ? &Clay_BorderElementConfig_DEFAULT : Clay__BorderElementConfigArray_Add(&context->borderElementConfigs, config); }
+Clay_SharedElementConfig * Clay__StoreSharedElementConfig_ctx(Clay_Context* context, Clay_SharedElementConfig config) {  return context->booleanWarnings.maxElementsExceeded ? &Clay_SharedElementConfig_DEFAULT : Clay__SharedElementConfigArray_Add(&context->sharedElementConfigs, config); }
 
-Clay_ElementConfig Clay__AttachElementConfig(Clay_ElementConfigUnion config, Clay__ElementConfigType type) {
-    Clay_Context* context = Clay_GetCurrentContext();
+Clay_ElementConfig Clay__AttachElementConfig_ctx(Clay_Context* context, Clay_ElementConfigUnion config, Clay__ElementConfigType type) {
     if (context->booleanWarnings.maxElementsExceeded) {
         return CLAY__INIT(Clay_ElementConfig) CLAY__DEFAULT_STRUCT;
     }
@@ -1389,8 +1393,7 @@ uint32_t Clay__HashTextWithConfig(Clay_String *text, Clay_TextElementConfig *con
     return hash + 1; // Reserve the hash result of zero as "null id"
 }
 
-Clay__MeasuredWord *Clay__AddMeasuredWord(Clay__MeasuredWord word, Clay__MeasuredWord *previousWord) {
-    Clay_Context* context = Clay_GetCurrentContext();
+Clay__MeasuredWord *Clay__AddMeasuredWord_ctx(Clay_Context* context, Clay__MeasuredWord *previousWord) {
     if (context->measuredWordsFreeList.length > 0) {
         uint32_t newItemIndex = Clay__int32_tArray_GetValue(&context->measuredWordsFreeList, (int)context->measuredWordsFreeList.length - 1);
         context->measuredWordsFreeList.length--;
@@ -1403,8 +1406,7 @@ Clay__MeasuredWord *Clay__AddMeasuredWord(Clay__MeasuredWord word, Clay__Measure
     }
 }
 
-Clay__MeasureTextCacheItem *Clay__MeasureTextCached(Clay_String *text, Clay_TextElementConfig *config) {
-    Clay_Context* context = Clay_GetCurrentContext();
+Clay__MeasureTextCacheItem *Clay__MeasureTextCached_ctx(Clay_Context* context, extElementConfig *config) {
     #ifndef CLAY_WASM
     if (!Clay__MeasureText) {
         if (!context->booleanWarnings.textMeasurementFunctionNotSet) {
@@ -1543,8 +1545,7 @@ bool Clay__PointIsInsideRect(Clay_Vector2 point, Clay_BoundingBox rect) {
     return point.x >= rect.x && point.x <= rect.x + rect.width && point.y >= rect.y && point.y <= rect.y + rect.height;
 }
 
-Clay_LayoutElementHashMapItem* Clay__AddHashMapItem(Clay_ElementId elementId, Clay_LayoutElement* layoutElement, uint32_t idAlias) {
-    Clay_Context* context = Clay_GetCurrentContext();
+Clay_LayoutElementHashMapItem* Clay__AddHashMapItem_ctx(Clay_Context* context, Clay_ElementId elementId, Clay_LayoutElement* layoutElement, uint32_t idAlias) {
     if (context->layoutElementsHashMapInternal.length == context->layoutElementsHashMapInternal.capacity - 1) {
         return NULL;
     }
@@ -1585,8 +1586,7 @@ Clay_LayoutElementHashMapItem* Clay__AddHashMapItem(Clay_ElementId elementId, Cl
     return hashItem;
 }
 
-Clay_LayoutElementHashMapItem *Clay__GetHashMapItem(uint32_t id) {
-    Clay_Context* context = Clay_GetCurrentContext();
+Clay_LayoutElementHashMapItem *Clay__GetHashMapItem_ctx(Clay_Context* context, uint32_t id) {
     uint32_t hashBucket = id % context->layoutElementsHashMap.capacity;
     int32_t elementIndex = context->layoutElementsHashMap.internalArray[hashBucket];
     while (elementIndex != -1) {
@@ -1599,8 +1599,7 @@ Clay_LayoutElementHashMapItem *Clay__GetHashMapItem(uint32_t id) {
     return &Clay_LayoutElementHashMapItem_DEFAULT;
 }
 
-Clay_ElementId Clay__GenerateIdForAnonymousElement(Clay_LayoutElement *openLayoutElement) {
-    Clay_Context* context = Clay_GetCurrentContext();
+Clay_ElementId Clay__GenerateIdForAnonymousElement_ctx(Clay_Context* context, Clay_LayoutElement *openLayoutElement) {
     Clay_LayoutElement *parentElement = Clay_LayoutElementArray_Get(&context->layoutElements, Clay__int32_tArray_GetValue(&context->openLayoutElementStack, context->openLayoutElementStack.length - 2));
     Clay_ElementId elementId = Clay__HashNumber(parentElement->childrenOrTextContent.children.length, parentElement->id);
     openLayoutElement->id = elementId.id;
@@ -1637,8 +1636,7 @@ void Clay__UpdateAspectRatioBox(Clay_LayoutElement *layoutElement) {
     }
 }
 
-void Clay__CloseElement(void) {
-    Clay_Context* context = Clay_GetCurrentContext();
+void Clay__CloseElement_ctx(Clay_Context* context) {
     if (context->booleanWarnings.maxElementsExceeded) {
         return;
     }
@@ -1802,8 +1800,7 @@ bool Clay__MemCmp(const char *s1, const char *s2, int32_t length);
     }
 #endif
 
-void Clay__OpenElement(void) {
-    Clay_Context* context = Clay_GetCurrentContext();
+void Clay__OpenElement_ctx(Clay_Context* context) {
     if (context->layoutElements.length == context->layoutElements.capacity - 1 || context->booleanWarnings.maxElementsExceeded) {
         context->booleanWarnings.maxElementsExceeded = true;
         return;
@@ -1818,8 +1815,7 @@ void Clay__OpenElement(void) {
     }
 }
 
-void Clay__OpenTextElement(Clay_String text, Clay_TextElementConfig *textConfig) {
-    Clay_Context* context = Clay_GetCurrentContext();
+void Clay__OpenTextElement_ctx(Clay_Context* context, Clay_String text, Clay_TextElementConfig *textConfig) {
     if (context->layoutElements.length == context->layoutElements.capacity - 1 || context->booleanWarnings.maxElementsExceeded) {
         context->booleanWarnings.maxElementsExceeded = true;
         return;
@@ -1852,8 +1848,7 @@ void Clay__OpenTextElement(Clay_String text, Clay_TextElementConfig *textConfig)
     parentElement->childrenOrTextContent.children.length++;
 }
 
-Clay_ElementId Clay__AttachId(Clay_ElementId elementId) {
-    Clay_Context* context = Clay_GetCurrentContext();
+Clay_ElementId Clay__AttachId_ctx(Clay_Context* context, Clay_ElementId elementId) {
     if (context->booleanWarnings.maxElementsExceeded) {
         return Clay_ElementId_DEFAULT;
     }
@@ -1865,8 +1860,7 @@ Clay_ElementId Clay__AttachId(Clay_ElementId elementId) {
     return elementId;
 }
 
-void Clay__ConfigureOpenElement(const Clay_ElementDeclaration declaration) {
-    Clay_Context* context = Clay_GetCurrentContext();
+void Clay__ConfigureOpenElement_ctx(Clay_Context* context, const Clay_ElementDeclaration declaration) {
     Clay_LayoutElement *openLayoutElement = Clay__GetOpenLayoutElement();
     openLayoutElement->layoutConfig = Clay__StoreLayoutConfig(declaration.layout);
     if ((declaration.layout.sizing.width.type == CLAY__SIZING_TYPE_PERCENT && declaration.layout.sizing.width.size.percent > 1) || (declaration.layout.sizing.height.type == CLAY__SIZING_TYPE_PERCENT && declaration.layout.sizing.height.size.percent > 1)) {
@@ -2039,8 +2033,7 @@ bool Clay__FloatEqual(float left, float right) {
     return subtracted < CLAY__EPSILON && subtracted > -CLAY__EPSILON;
 }
 
-void Clay__SizeContainersAlongAxis(bool xAxis) {
-    Clay_Context* context = Clay_GetCurrentContext();
+void Clay__SizeContainersAlongAxis_ctx(Clay_Context* context, bool xAxis) {
     Clay__int32_tArray bfsBuffer = context->layoutElementChildrenBuffer;
     Clay__int32_tArray resizableContainerBuffer = context->openLayoutElementStack;
     for (int32_t rootIndex = 0; rootIndex < context->layoutElementTreeRoots.length; ++rootIndex) {
@@ -2248,11 +2241,10 @@ void Clay__SizeContainersAlongAxis(bool xAxis) {
     }
 }
 
-Clay_String Clay__IntToString(int32_t integer) {
+Clay_String Clay__IntToString_ctx(Clay_Context* context, int32_t integer) {
     if (integer == 0) {
         return CLAY__INIT(Clay_String) { .length = 1, .chars = "0" };
     }
-    Clay_Context* context = Clay_GetCurrentContext();
     char *chars = (char *)(context->dynamicStringData.internalArray + context->dynamicStringData.length);
     int32_t length = 0;
     int32_t sign = integer;
@@ -2279,8 +2271,7 @@ Clay_String Clay__IntToString(int32_t integer) {
     return CLAY__INIT(Clay_String) { .length = length, .chars = chars };
 }
 
-void Clay__AddRenderCommand(Clay_RenderCommand renderCommand) {
-    Clay_Context* context = Clay_GetCurrentContext();
+void Clay__AddRenderCommand_ctx(Clay_Context* context, Clay_RenderCommand renderCommand) {
     if (context->renderCommands.length < context->renderCommands.capacity - 1) {
         Clay_RenderCommandArray_Add(&context->renderCommands, renderCommand);
     } else {
@@ -2294,8 +2285,7 @@ void Clay__AddRenderCommand(Clay_RenderCommand renderCommand) {
     }
 }
 
-bool Clay__ElementIsOffscreen(Clay_BoundingBox *boundingBox) {
-    Clay_Context* context = Clay_GetCurrentContext();
+bool Clay__ElementIsOffscreen_ctx(Clay_Context* context, Clay_BoundingBox *boundingBox) {
     if (context->disableCulling) {
         return false;
     }
@@ -2306,8 +2296,7 @@ bool Clay__ElementIsOffscreen(Clay_BoundingBox *boundingBox) {
            (boundingBox->y + boundingBox->height < 0);
 }
 
-void Clay__CalculateFinalLayout(void) {
-    Clay_Context* context = Clay_GetCurrentContext();
+void Clay__CalculateFinalLayout_ctx(Clay_Context* context) {
     // Calculate sizing along the X axis
     Clay__SizeContainersAlongAxis(true);
 
@@ -2964,8 +2953,7 @@ typedef struct {
 } Clay__RenderDebugLayoutData;
 
 // Returns row count
-Clay__RenderDebugLayoutData Clay__RenderDebugLayoutElementsList(int32_t initialRootsLength, int32_t highlightedRowIndex) {
-    Clay_Context* context = Clay_GetCurrentContext();
+Clay__RenderDebugLayoutData Clay__RenderDebugLayoutElementsList_ctx(Clay_Context* context, int32_t initialRootsLength, int32_t highlightedRowIndex) {
     Clay__int32_tArray dfsBuffer = context->reusableElementIndexBuffer;
     Clay__DebugView_ScrollViewItemLayoutConfig = CLAY__INIT(Clay_LayoutConfig) { .sizing = { .height = CLAY_SIZING_FIXED(CLAY__DEBUGVIEW_ROW_HEIGHT) }, .childGap = 6, .childAlignment = { .y = CLAY_ALIGN_Y_CENTER }};
     Clay__RenderDebugLayoutData layoutData = CLAY__DEFAULT_STRUCT;
@@ -3191,16 +3179,14 @@ void Clay__RenderDebugViewCornerRadius(Clay_CornerRadius cornerRadius, Clay_Text
     }
 }
 
-void HandleDebugViewCloseButtonInteraction(Clay_ElementId elementId, Clay_PointerData pointerInfo, intptr_t userData) {
-    Clay_Context* context = Clay_GetCurrentContext();
+void HandleDebugViewCloseButtonInteraction_ctx(Clay_Context* context, Clay_ElementId elementId, Clay_PointerData pointerInfo, intptr_t userData) {
     (void) elementId; (void) pointerInfo; (void) userData;
     if (pointerInfo.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME) {
         context->debugModeEnabled = false;
     }
 }
 
-void Clay__RenderDebugView(void) {
-    Clay_Context* context = Clay_GetCurrentContext();
+void Clay__RenderDebugView_ctx(Clay_Context* context) {
     Clay_ElementId closeButtonId = Clay__HashString(CLAY_STRING("Clay__DebugViewTopHeaderCloseButtonOuter"), 0, 0);
     if (context->pointerInfo.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME) {
         for (int32_t i = 0; i < context->pointerOverIds.length; ++i) {
@@ -3539,7 +3525,7 @@ void Clay__RenderDebugView(void) {
 uint32_t Clay__debugViewWidth = 400;
 Clay_Color Clay__debugViewHighlightColor = { 168, 66, 28, 100 };
 
-Clay__WarningArray Clay__WarningArray_Allocate_Arena(int32_t capacity, Clay_Arena *arena) {
+Clay__WarningArray Clay__WarningArray_Allocate_Arena_ctx(Clay_Context* context, int32_t capacity, Clay_Arena *arena) {
     size_t totalSizeBytes = capacity * sizeof(Clay_String);
     Clay__WarningArray array = {.capacity = capacity, .length = 0};
     uintptr_t nextAllocOffset = arena->nextAllocation + (64 - (arena->nextAllocation % 64));
@@ -3548,10 +3534,10 @@ Clay__WarningArray Clay__WarningArray_Allocate_Arena(int32_t capacity, Clay_Aren
         arena->nextAllocation = nextAllocOffset + totalSizeBytes;
     }
     else {
-        Clay__currentContext->errorHandler.errorHandlerFunction(CLAY__INIT(Clay_ErrorData) {
+        context->errorHandler.errorHandlerFunction(CLAY__INIT(Clay_ErrorData) {
             .errorType = CLAY_ERROR_TYPE_ARENA_CAPACITY_EXCEEDED,
             .errorText = CLAY_STRING("Clay attempted to allocate memory in its arena, but ran out of capacity. Try increasing the capacity of the arena passed to Clay_Initialize()"),
-            .userData = Clay__currentContext->errorHandler.userData });
+            .userData = context->errorHandler.userData });
     }
     return array;
 }
@@ -3565,7 +3551,7 @@ Clay__Warning *Clay__WarningArray_Add(Clay__WarningArray *array, Clay__Warning i
     return &CLAY__WARNING_DEFAULT;
 }
 
-void* Clay__Array_Allocate_Arena(int32_t capacity, uint32_t itemSize, Clay_Arena *arena)
+void* Clay__Array_Allocate_Arena_ctx(Clay_Context* context, int32_t capacity, uint32_t itemSize, Clay_Arena *arena)
 {
     size_t totalSizeBytes = capacity * itemSize;
     uintptr_t nextAllocOffset = arena->nextAllocation + (64 - (arena->nextAllocation % 64));
@@ -3574,20 +3560,19 @@ void* Clay__Array_Allocate_Arena(int32_t capacity, uint32_t itemSize, Clay_Arena
         return (void*)((uintptr_t)arena->memory + (uintptr_t)nextAllocOffset);
     }
     else {
-        Clay__currentContext->errorHandler.errorHandlerFunction(CLAY__INIT(Clay_ErrorData) {
+        context->errorHandler.errorHandlerFunction(CLAY__INIT(Clay_ErrorData) {
                 .errorType = CLAY_ERROR_TYPE_ARENA_CAPACITY_EXCEEDED,
                 .errorText = CLAY_STRING("Clay attempted to allocate memory in its arena, but ran out of capacity. Try increasing the capacity of the arena passed to Clay_Initialize()"),
-                .userData = Clay__currentContext->errorHandler.userData });
+                .userData = context->errorHandler.userData });
     }
     return CLAY__NULL;
 }
 
-bool Clay__Array_RangeCheck(int32_t index, int32_t length)
+bool Clay__Array_RangeCheck_ctx(Clay_Context* context, int32_t index, int32_t length)
 {
     if (index < length && index >= 0) {
         return true;
     }
-    Clay_Context* context = Clay_GetCurrentContext();
     context->errorHandler.errorHandlerFunction(CLAY__INIT(Clay_ErrorData) {
             .errorType = CLAY_ERROR_TYPE_INTERNAL_ERROR,
             .errorText = CLAY_STRING("Clay attempted to make an out of bounds array access. This is an internal error and is likely a bug."),
@@ -3595,12 +3580,11 @@ bool Clay__Array_RangeCheck(int32_t index, int32_t length)
     return false;
 }
 
-bool Clay__Array_AddCapacityCheck(int32_t length, int32_t capacity)
+bool Clay__Array_AddCapacityCheck_ctx(Clay_Context* context, int32_t length, int32_t capacity)
 {
     if (length < capacity) {
         return true;
     }
-    Clay_Context* context = Clay_GetCurrentContext();
     context->errorHandler.errorHandlerFunction(CLAY__INIT(Clay_ErrorData) {
         .errorType = CLAY_ERROR_TYPE_INTERNAL_ERROR,
         .errorText = CLAY_STRING("Clay attempted to make an out of bounds array access. This is an internal error and is likely a bug."),
@@ -4069,7 +4053,7 @@ CLAY_WASM_EXPORT("Clay_SetMaxMeasureTextCacheWordCount")
 void Clay_SetMaxMeasureTextCacheWordCount(int32_t maxMeasureTextCacheWordCount) {
     Clay_Context* context = Clay_GetCurrentContext();
     if (context) {
-        Clay__currentContext->maxMeasureTextCacheWordCount = maxMeasureTextCacheWordCount;
+        context->maxMeasureTextCacheWordCount = maxMeasureTextCacheWordCount;
     } else {
         Clay__defaultMaxMeasureTextWordCacheCount = maxMeasureTextCacheWordCount; // TODO: Fix this
     }
