@@ -1,6 +1,3 @@
-#define CLAY_IMPLEMENTATION 
-// FIXME: Remove this ^^^^
-
 // VERSION: 0.12
 
 /*
@@ -4033,7 +4030,7 @@ Clay_ElementData Clay_GetElementData_ctx(Clay_Context* context, Clay_ElementId i
 }
 CLAY_WASM_EXPORT("Clay_GetElementData")
 Clay_ElementData Clay_GetElementData(Clay_ElementId id) {
-    return Clay_GetElementData_ctx(nullptr, id); //Defined to allow the implementation to access the context if necessary in future.
+    return Clay_GetElementData_ctx(0, id); //Defined to allow the implementation to access the context if necessary in future.
 }
 
 void Clay_SetDebugModeEnabled_ctx(Clay_Context* context, bool enabled) {
