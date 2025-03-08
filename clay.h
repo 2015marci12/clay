@@ -4075,7 +4075,7 @@ void Clay_SetExternalScrollHandlingEnabled_ctx(Clay_Context* context, bool enabl
 }
 CLAY_WASM_EXPORT("Clay_SetExternalScrollHandlingEnabled")
 void Clay_SetExternalScrollHandlingEnabled(bool enabled) {
-    Clay_SetExternalScrollHandlingEnabled_ctx(Clay_GetCurrentContext());
+    Clay_SetExternalScrollHandlingEnabled_ctx(Clay_GetCurrentContext(), enabled);
 }
 
 int32_t Clay_GetMaxElementCount_ctx(Clay_Context* context) {
